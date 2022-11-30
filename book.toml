@@ -3,4 +3,4 @@ authors = ["zhulg"]
 language = "en"
 multilingual = false
 src = "src"
-title = "RustNote"
+title = "Rust学习精简笔记"
