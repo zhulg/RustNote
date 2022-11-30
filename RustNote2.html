@@ -3,7 +3,7 @@
     <head>
         <!-- Book generated using mdBook -->
         <meta charset="UTF-8">
-        <title>精简笔记二 - RustNote</title>
+        <title>精简笔记二 - Rust学习精简笔记</title>
 
 
         <!-- Custom HTML head -->
@@ -110,7 +110,7 @@
                         </button>
                     </div>
 
-                    <h1 class="menu-title">RustNote</h1>
+                    <h1 class="menu-title">Rust学习精简笔记</h1>
 
                     <div class="right-buttons">
                         <a href="print.html" title="Print this book" aria-label="Print this book">
@@ -143,6 +143,544 @@
                 <div id="content" class="content">
                     <main>
                         <h1 id="精简笔记二"><a class="header" href="#精简笔记二">精简笔记二</a></h1>
+<h2 id="八泛型trait生命周期"><a class="header" href="#八泛型trait生命周期">八，泛型、Trait、生命周期</a></h2>
+<h4 id="泛型"><a class="header" href="#泛型">泛型：</a></h4>
+<ul>
+<li><strong>函数定义中使用泛型</strong></li>
+</ul>
+<pre><code>fn largest&lt;T&gt;(list: &amp;[T]) -&gt; T {
+}
+//函数 largest 有泛型类型 T。它有个参数 list，其类型是元素为 T 的 slice。largest 函数的返回值类型也是 T
+//类型参数声明位于函数名称与参数列表中间的尖括号 &lt;&gt;
+</code></pre>
+<ul>
+<li><strong>结构体定义中的泛型</strong></li>
+</ul>
+<pre><pre class="playground"><code class="language-rust">struct Point&lt;T&gt; {
+    x: T,
+    y: T,
+}
+
+fn main() {
+    let integer = Point { x: 5, y: 10 };
+    let float = Point { x: 1.0, y: 4.0 };
+}
+</code></pre></pre>
+<ul>
+<li><strong>枚举定义中的泛型</strong></li>
+</ul>
+<pre><pre class="playground"><code class="language-rust"><span class="boring">#![allow(unused)]
+</span><span class="boring">fn main() {
+</span>enum Option&lt;T&gt; {
+    Some(T),
+    None,
+}
+
+enum Result&lt;T, E&gt; {
+    Ok(T),
+    Err(E),
+}
+
+<span class="boring">}
+</span></code></pre></pre>
+<ul>
+<li><strong>方法定义中的泛型</strong></li>
+</ul>
+<pre><pre class="playground"><code class="language-rust">struct Point&lt;T&gt; {
+    x: T,
+    y: T,
+}
+
+impl&lt;T&gt; Point&lt;T&gt; {
+    fn x(&amp;self) -&gt; &amp;T {
+        &amp;self.x
+    }
+}
+
+fn main() {
+    let p = Point { x: 5, y: 10 };
+
+    println!(&quot;p.x = {}&quot;, p.x());
+}
+</code></pre></pre>
+<h4 id="trait"><a class="header" href="#trait">Trait：</a></h4>
+<ul>
+<li>通过 trait 以一种抽象的方式定义共享的行为,<em>trait</em>  类似于其他语言中的接口，但也不完全一样.</li>
+</ul>
+<pre><pre class="playground"><code class="language-rust">//定义 trait Summary ,定义summarize调取-&gt;summarize_author默认方法，达到调用默认行为，区分开实现trait的的定义
+pub trait Summary {
+    fn summarize_author(&amp;self) -&gt; String;
+    fn summarize(&amp;self) -&gt; String {
+        format!(&quot;(Read more from {}...)&quot;, self.summarize_author())
+    }
+}
+
+pub struct Tweet {
+    pub username: String,
+    pub content: String,
+    pub reply: bool,
+    pub retweet: bool,
+}
+//实现 trait Summary
+impl Summary for Tweet {
+    fn summarize_author(&amp;self) -&gt; String {
+        format!(&quot;@{}&quot;, self.username)
+    }
+}
+
+fn main() {
+    let tweet = Tweet {
+        username: String::from(&quot;horse_ebooks&quot;),
+        content: String::from(&quot;of course, as you probably already know, people&quot;),
+        reply: false,
+        retweet: false,
+    };
+
+    println!(&quot;1 new tweet: {}&quot;, tweet.summarize());
+}
+
+</code></pre></pre>
+<ul>
+<li><strong>trait 作为参数：</strong></li>
+</ul>
+<pre><pre class="playground"><code class="language-rust"><span class="boring">#![allow(unused)]
+</span><span class="boring">fn main() {
+</span>// 方法接收是实现了 trait Summary的类型
+pub fn notify(item: &amp;impl Summary) {
+    println!(&quot;Breaking news! {}&quot;, item.summarize());
+}
+<span class="boring">}
+</span></code></pre></pre>
+<ul>
+<li><strong>Trait Bound：</strong> 
+impl Trait 适用于短小的例子。trait bound 则适用于更复杂的场景，trait bound 与泛型参数声明在一起，位于尖括号中的冒号后面。</li>
+</ul>
+<pre><pre class="playground"><code class="language-rust"><span class="boring">#![allow(unused)]
+</span><span class="boring">fn main() {
+</span>//使用相同类型的trait可以转换成下边的更简单写法
+pub fn notify(item1: &amp;impl Summary, item2: &amp;impl Summary) {}
+
+// trait Bound的写法
+pub fn notify&lt;T: Summary&gt;(item1: &amp;T, item2: &amp;T) {}
+<span class="boring">}
+</span></code></pre></pre>
+<ul>
+<li><strong>通过 <code>+</code> 指定多个 trait bound:</strong></li>
+</ul>
+<pre><pre class="playground"><code class="language-rust"><span class="boring">#![allow(unused)]
+</span><span class="boring">fn main() {
+</span>pub fn notify&lt;T: Summary + Display&gt;(item: &amp;T) {}
+<span class="boring">}
+</span></code></pre></pre>
+<ul>
+<li>
+<p><strong>通过 <code>where</code> 简化 trait bound：</strong></p>
+<p>每个泛型有其自己的 trait bound，所以有多个泛型参数的函数在名称和参数列表之间会有很长的 trait bound 信息，这使得函数签名难以阅读</p>
+</li>
+</ul>
+<pre><pre class="playground"><code class="language-rust"><span class="boring">#![allow(unused)]
+</span><span class="boring">fn main() {
+</span>fn some_function&lt;T, U&gt;(t: &amp;T, u: &amp;U) -&gt; i32
+    where T: Display + Clone,
+          U: Clone + Debug
+{
+}
+<span class="boring">}
+</span></code></pre></pre>
+<h4 id="声明周期"><a class="header" href="#声明周期">声明周期：</a></h4>
+<ul>
+<li>
+<p>Rust 中的每一个引用都有其 生命周期（lifetime），也就是引用保持有效的作用域，Rust 编译器有一个借用检查器（borrow checker）它比较作用域来确保所有的借用都是有效的</p>
+</li>
+<li>
+<p><strong>函数签名中的生命周期注解：</strong></p>
+</li>
+</ul>
+<pre><pre class="playground"><code class="language-rust">fn longest&lt;'a&gt;(x: &amp;'a str, y: &amp;'a str) -&gt; &amp;'a str {
+    if x.len() &gt; y.len() {
+        x
+    } else {
+        y
+    }
+}
+fn main() {
+    let string1 = String::from(&quot;abcd&quot;);
+    let string2 = &quot;xyz&quot;;
+
+    let result = longest(string1.as_str(), string2);
+    println!(&quot;The longest string is {}&quot;, result);
+}
+
+</code></pre></pre>
+<ul>
+<li>参数声明周期使用方法，或者靠编译器提示添加。</li>
+</ul>
+<pre><pre class="playground"><code class="language-rust"><span class="boring">#![allow(unused)]
+</span><span class="boring">fn main() {
+</span>&amp;i32        // 引用, 没有生命周期参数的 i32 的引用
+&amp;'a i32     // 带有显式生命周期的引用 ，一个有叫做 'a 的生命周期参数的 i32 的引用
+&amp;'a mut i32 // 带有显式生命周期的可变引用 一个生命周期也是 'a 的 i32 的可变引用
+
+<span class="boring">}
+</span></code></pre></pre>
+<ul>
+<li><strong>结构体定义中的生命周期注解：</strong></li>
+</ul>
+<pre><pre class="playground"><code class="language-rust">struct ImportantExcerpt&lt;'a&gt; {
+    part: &amp;'a str,
+}
+fn main() {
+    let novel = String::from(&quot;Call me Ishmael. Some years ago...&quot;);
+    let first_sentence = novel.split('.').next().expect(&quot;Could not find a '.'&quot;);
+    let i = ImportantExcerpt {
+        part: first_sentence,
+    };
+}
+</code></pre></pre>
+<ul>
+<li>
+<p><strong>静态生命周期:</strong></p>
+</li>
+<li>
+<p>生命周期能够存活于整个程序期间。所有的字符串字面值都拥有 'static 生命周期</p>
+</li>
+</ul>
+<pre><pre class="playground"><code class="language-rust"><span class="boring">#![allow(unused)]
+</span><span class="boring">fn main() {
+</span>let s: &amp;'static str = &quot;I have a static lifetime.&quot;;
+<span class="boring">}
+</span></code></pre></pre>
+<h2 id="九集合"><a class="header" href="#九集合">九，集合：</a></h2>
+<h4 id="vector"><a class="header" href="#vector">vector:</a></h4>
+<ul>
+<li>类型是 Vec<T> 在内存中彼此相邻地排列所有的值, vector 只能储存相同类型的值</li>
+</ul>
+<pre><pre class="playground"><code class="language-rust"><span class="boring">#![allow(unused)]
+</span><span class="boring">fn main() {
+</span>  // Vec::new 创建
+  let v: Vec&lt;i32&gt; = Vec::new();
+  v.push(2);
+  v.push(4);
+  let x = v.pop();
+
+<span class="boring">}
+</span></code></pre></pre>
+<ul>
+<li><strong>初始值来创建一个 Vec<T> :</strong></li>
+</ul>
+<pre><pre class="playground"><code class="language-rust"><span class="boring">#![allow(unused)]
+</span>
+<span class="boring">fn main() {
+</span> let v = vec![1, 2, 3];
+
+<span class="boring">}
+</span></code></pre></pre>
+<ul>
+<li><strong>读取 vector 的元素:</strong>
+使用 &amp;[index] 返回一个引用, 或者使用 get 方法以索引作为参数来返回一个 Option&lt;&amp;T&gt;。</li>
+</ul>
+<pre><pre class="playground"><code class="language-rust">fn main() {
+    let v = vec![1, 2, 3, 4, 5];
+
+    let third: &amp;i32 = &amp;v[2];
+    println!(&quot;The third element is {}&quot;, third);
+
+    match v.get(2) {
+        Some(third) =&gt; println!(&quot;The third element is {}&quot;, third),
+        None =&gt; println!(&quot;There is no third element.&quot;),
+    }
+}
+</code></pre></pre>
+<ul>
+<li><strong>使用枚举来储存多种类型:</strong>
+创建一个储存枚举值的 vector，这样最终就能够通过vector存储实际是不同类型的值了</li>
+</ul>
+<pre><pre class="playground"><code class="language-rust">fn main() {
+   enum SpreadsheetCell {
+       Int(i32),
+       Float(f64),
+       Text(String),
+   }
+   let row = vec![
+       SpreadsheetCell::Int(3),
+       SpreadsheetCell::Text(String::from(&quot;blue&quot;)),
+       SpreadsheetCell::Float(10.12),
+   ];
+}
+</code></pre></pre>
+<h4 id="hashmap"><a class="header" href="#hashmap">HashMap</a></h4>
+<pre><pre class="playground"><code class="language-rust"><span class="boring">#![allow(unused)]
+</span><span class="boring">fn main() {
+</span>    let mut scores = HashMap::new();
+    scores.insert(String::from(&quot;Blue&quot;), 10); //插入
+    //只在键没有对应值时插入
+    scores.entry(String::from(&quot;Yellow&quot;)).or_insert(50);
+    scores.entry(String::from(&quot;Blue&quot;)).or_insert(50);
+    println!(&quot;{:?}&quot;, scores);
+<span class="boring">}
+</span></code></pre></pre>
+<ul>
+<li>more： https://doc.rust-lang.org/std/collections/index.html</li>
+</ul>
+<h2 id="十函数闭包迭代器"><a class="header" href="#十函数闭包迭代器">十，函数、闭包、迭代器</a></h2>
+<h4 id="函数"><a class="header" href="#函数">函数：</a></h4>
+<ul>
+<li>函数的定义方式及在结构体实现里关联函数，关联函数与方法的使用区别</li>
+</ul>
+<pre><pre class="playground"><code class="language-rust">use std::primitive;
+
+struct Point {
+    x: i32,
+    y: i32,
+}
+impl Point {
+    // 关联函数(没有self相关参数)
+    fn new(x: i32, y: i32) -&gt; Point {
+        Point { x: x, y: y }
+    }
+    // 方法(参数为&amp;self，是个隐示的，调用时无需传递表明是该类型而已）
+    fn get_x(&amp;self) -&gt; i32 {
+        self.x
+    }
+}
+fn main() {
+    //关联函数使用:: 方法使用类型.方法，如Point::new, point.get_x
+    let point = Point::new(5, 6);
+    println!(&quot;get x={}&quot;, point.get_x());
+}
+
+</code></pre></pre>
+<h4 id="闭包"><a class="header" href="#闭包">闭包：</a></h4>
+<ul>
+<li>**闭包（closures）**是可以保存在一个变量中或作为参数传递给其他函数的匿名函数。 闭包的定义以一对竖线（|）开始，在竖线中指定闭包的参数</li>
+</ul>
+<pre><pre class="playground"><code class="language-rust"><span class="boring">#![allow(unused)]
+</span><span class="boring">fn main() {
+</span>fn  add_one_v1   (x: u32) -&gt; u32 { x + 1 }  //函数的定义
+let add_one_v2 = |x: u32| -&gt; u32 { x + 1 }; // 完整标注的闭包定义
+let add_one_v3 = |x|             { x + 1 };  // 闭包定义中省略了类型注解
+let add_one_v4 = |x|               x + 1  ;  // 闭包体只有一行,去掉了大括号
+
+<span class="boring">}
+</span></code></pre></pre>
+<ul>
+<li><strong>闭包会捕获其环境:</strong> </li>
+<li>可以捕获其环境并访问其被定义的作用域的变量。如下边 x 并不是 equal_to_x 的一个参数，equal_to_x 闭包也被允许使用变量 x，因为它与 equal_to_x 定义于相同的作用域</li>
+</ul>
+<pre><pre class="playground"><code class="language-rust">fn main() {
+    let x = 4;
+    let equal_to_x = |z| z == x;
+    let y = 4;
+
+    assert!(equal_to_x(y));
+}
+</code></pre></pre>
+<ul>
+<li>
+<p><strong><em>当闭包从环境中捕获一个值，闭包会在闭包体中储存这个值以供使用，这会使用内存并产生额外的开销。</em></strong></p>
+</li>
+<li>
+<p>闭包可以通过三种方式捕获其环境，他们直接对应函数的三种获取参数的方式：获取所有权，可变借用和不可变借用。</p>
+</li>
+</ul>
+<pre><pre class="playground"><code class="language-rust"><span class="boring">#![allow(unused)]
+</span><span class="boring">fn main() {
+</span>FnOnce 消费从周围作用域捕获的变量，闭包周围的作用域被称为其 环境，environment。为了消费捕获到的变量，闭包必须获取其所有权并在定义闭包时将其移动进闭包。其名称的 Once 部分代表了闭包不能多次获取相同变量的所有权的事实，所以它只能被调用一次
+FnMut 获取可变的借用值所以可以改变其环境
+Fn 从其环境获取不可变的借用值
+
+<span class="boring">}
+</span></code></pre></pre>
+<p>由于所有闭包都可以被调用至少一次，所以所有闭包都实现了 FnOnce .<strong>大部分需要指定一个 Fn 系列 trait bound 的时候，可以从 Fn 开始，而编译器会根据闭包体中的情况告诉你是否需要 FnMut 或 FnOnce。</strong></p>
+<ul>
+<li><strong>带有泛型和 Fn trait 的闭包:</strong>
+可以创建一个存放闭包和调用闭包结果的结构体, 目的：结构体只会在需要结果时执行闭包，并会缓存结果值，再次调用闭包可以复用该值.</li>
+</ul>
+<pre><pre class="playground"><code class="language-rust"><span class="boring">#![allow(unused)]
+</span><span class="boring">fn main() {
+</span>struct Cacher&lt;T&gt;
+where
+    T: Fn(u32) -&gt; u32,
+{
+    calculation: T,
+    value: Option&lt;u32&gt;,
+}
+
+<span class="boring">}
+</span></code></pre></pre>
+<p><em><strong>创建Cache的结构体，泛型T类型使用where 声明类型为闭包，结构体包含一个闭包，和一个用于存放闭包返回的值的u32类型，因为有可能第一次没有缓存，所有使用Option<u32>的类型。即可能是some(u32) 或者None</strong></em></p>
+<ul>
+<li><strong>官方完整例子：</strong></li>
+</ul>
+<pre><pre class="playground"><code class="language-rust">use std::thread;
+use std::time::Duration;
+
+struct Cacher&lt;T&gt;
+where
+    T: Fn(u32) -&gt; u32,
+{
+    calculation: T,
+    value: Option&lt;u32&gt;,
+}
+
+impl&lt;T&gt; Cacher&lt;T&gt;
+where
+    T: Fn(u32) -&gt; u32,
+{
+    fn new(calculation: T) -&gt; Cacher&lt;T&gt; {
+        Cacher {
+            calculation,
+            value: None,
+        }
+    }
+
+    fn value(&amp;mut self, arg: u32) -&gt; u32 {
+        match self.value {
+            Some(v) =&gt; v,
+            None =&gt; {
+                let v = (self.calculation)(arg);
+                self.value = Some(v);
+                v
+            }
+        }
+    }
+}
+
+fn generate_workout(intensity: u32, random_number: u32) {
+    let mut expensive_result = Cacher::new(|num| {
+        println!(&quot;calculating slowly...&quot;);
+        thread::sleep(Duration::from_secs(2));
+        num
+    });
+
+    if intensity &lt; 25 {
+        println!(&quot;Today, do {} pushups!&quot;, expensive_result.value(intensity));
+        println!(&quot;Next, do {} situps!&quot;, expensive_result.value(intensity));
+    } else {
+        if random_number == 3 {
+            println!(&quot;Take a break today! Remember to stay hydrated!&quot;);
+        } else {
+            println!(
+                &quot;Today, run for {} minutes!&quot;,
+                expensive_result.value(intensity)
+            );
+        }
+    }
+}
+
+fn main() {
+    let simulated_user_specified_value = 10;
+    let simulated_random_number = 7;
+
+    generate_workout(simulated_user_specified_value, simulated_random_number);
+}
+
+</code></pre></pre>
+<p><strong>a.这样可以起到了使用结构体缓存了闭包执行的结果，会先从结构体里查找缓存的值，没有再计算。
+b.同理也可以改造value的类型为HashMap, 可以通过key来找值，避免返回之前计算的始终同一个值。</strong></p>
+<h3 id="iterator"><a class="header" href="#iterator">iterator:</a></h3>
+<ul>
+<li>**迭代器（iterator):**负责遍历序列中的每一项和决定序列何时结束的逻辑。</li>
+</ul>
+<pre><pre class="playground"><code class="language-rust"><span class="boring">#![allow(unused)]
+</span><span class="boring">fn main() {
+</span>    let v1 = vec![1, 2, 3];
+    let v1_iter = v1.iter();
+    let total: i32 = v1_iter.sum();
+    println!(&quot;value = {}&quot;, { total })
+<span class="boring">}
+</span></code></pre></pre>
+<ul>
+<li>next 是 Iterator 实现者被要求定义的唯一方法</li>
+</ul>
+<pre><pre class="playground"><code class="language-rust"><span class="boring">#![allow(unused)]
+</span><span class="boring">fn main() {
+</span>  let v1 = vec![1, 2, 3];
+  let mut v1_iter = v1.iter();
+  assert_eq!(v1_iter.next(), Some(&amp;1));
+
+<span class="boring">}
+</span></code></pre></pre>
+<ul>
+<li>调用 map 方法创建一个新迭代器，接着调用 collect 方法消费新迭代器并创建一个 vector</li>
+</ul>
+<pre><pre class="playground"><code class="language-rust">//next 一次返回迭代器中的一个项，封装在 Some 中，当迭代器结束时，它返回 None
+fn main() {
+    let v1: Vec&lt;i32&gt; = vec![1, 2, 3];
+    let mut newiter = v1.iter().map(|x| x + 1);
+    let newVector: Vec&lt;_&gt; = newiter.collect();
+    assert_eq!(newVector, vec![2, 3, 4]);
+}
+
+</code></pre></pre>
+<ul>
+<li><em><strong>迭代器 iter()、iter_mut()、into_iter()区别：</strong></em></li>
+</ul>
+<ol>
+<li>iter()返回的是值的不可变引用. 即&amp;T</li>
+<li>iter_mut() 返回的是值的可变引用. 即&amp;mut T</li>
+<li>into_iter() 返回的是T类型的值 </li>
+</ol>
+<pre><pre class="playground"><code class="language-rust">use core::num;
+fn main() {
+    // iter() 返回的是值的不可变引用，即&amp;T.(此处map里闭包x本身无法改变)
+    let vec = vec![1, 2, 3, 4];
+    let new_vec: Vec&lt;_&gt; = vec.iter().map(|x| x + 1).collect();
+    println!(&quot;{:?}&quot;, vec);
+    println!(&quot;{:?}&quot;, new_vec);
+
+    //iter_mut() 返回的是值的可变引用，即&amp;mut T.(此处map里闭包x本身+1)
+    let mut vec = vec![1, 2, 3, 4];
+    vec.iter_mut().for_each(|x| *x += 1);
+    println!(&quot;{:?}&quot;, vec);
+
+    //into_iter() 返回的是T类型的值  (因为所有权 vec是不能再使用)
+    let vec = vec![1, 2, 3, 4];
+    let new_vec: Vec&lt;_&gt; = vec.into_iter().filter(|x| *x == 2).collect();
+    // println!(&quot;{:?}&quot;, vec); // 无法编译
+    println!(&quot;{:?}&quot;, new_vec);
+}
+   
+</code></pre></pre>
+<ul>
+<li><strong>实现Iterator trait 来创建自定义迭代器:</strong></li>
+</ul>
+<pre><code>struct Counter {
+    count: u32,
+}
+
+impl Counter {
+    fn new() -&gt; Counter {
+        Counter { count: 0 }
+    }
+}
+
+//Counter 类型实现 Iterator trait，通过定义 next 方法来指定使用迭代器时的行为
+impl Iterator for Counter {
+    type Item = u32; 
+     //将迭代器的关联类型 Item 设置为 u32，意味着迭代器会返回 u32 值集合
+    fn next(&amp;mut self) -&gt; Option&lt;Self::Item&gt; {
+        if self.count &lt; 5 {
+            self.count += 1;
+            Some(self.count)
+        } else {
+            None
+        }
+    }
+}
+</code></pre>
+<ul>
+<li>Rust里iterator的定义：</li>
+</ul>
+<pre><pre class="playground"><code class="language-rust"><span class="boring">#![allow(unused)]
+</span><span class="boring">fn main() {
+</span>pub trait Iterator {
+    type Item;
+
+    fn next(&amp;mut self) -&gt; Option&lt;Self::Item&gt;;
+}
+<span class="boring">}
+</span></code></pre></pre>
 
                     </main>
 
